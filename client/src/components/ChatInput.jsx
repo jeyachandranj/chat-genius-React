@@ -8,6 +8,8 @@ import { IoMdSend } from "react-icons/io";
 import styled from "styled-components";
 import Picker from "emoji-picker-react";
 import { FaSyncAlt, FaTimes } from 'react-icons/fa';
+import Groq from "groq-sdk";
+
 
 
 
@@ -17,6 +19,9 @@ export default function ChatInput({ handleSendMsg }) {
   const handleEmojiPickerhideShow = () => {
     setShowEmojiPicker(!showEmojiPicker);
   };
+
+  const groq = new Groq({ apiKey: "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", dangerouslyAllowBrowser: true });
+
 
   const handleEmojiClick = (event, emojiObject) => {
     let message = msg;
@@ -37,77 +42,68 @@ export default function ChatInput({ handleSendMsg }) {
   const toggleModal = () => {
     setModal(false);
   }
-  const textProcessing = (title) => {
+  const textProcessing = async (title) => {
+    let content = " ";
+      if (true) {
+        let systemcontent = msg;
+        switch (title) {
+          case "TRANSLATE":
+            systemcontent = "Translate the following sentence into Tamil without adding any additional words: " + msg;
+            break;
+          case "REPHRASE":
+            systemcontent = "Rephrase the following message with proper grammar and spelling to make it sound natural and conversational.";
+            break;
+          case "SUMMARY":
+            systemcontent = "Summarize the following content in a concise and clear manner.";
 
-    if(true)
-    {
-      let systemcontent=msg;
-      switch (title) {
-        case "TRANSLATE":
-          systemcontent="Please translate the given sentence into tamil "+msg;
-          break;
-        case "REPHRASE":
-          systemcontent="You are chatting with a friend. Rephrase and correct the grammar and spelling of the following message as if you were sending it to a friend";
-          break;
-        case "SUMMARY":
-          console.log("It's Wednesday!");
-          break;
-        case "EXPAND":
-          systemcontent="You are helping me expand short and incomplete sentences into meaningful messages, up to 100 words, as if I'm chatting with a friend";
-          break;
-        default:
-          console.log("It's the weekend!");
-      }
-      // Replace with your OpenAI API key
-      const apiKey = 'API KEY'
-      const apiUrl = 'https://api.openai.com/v1/chat/completions';
-      const requestData = {
-        model: 'gpt-3.5-turbo',
-        messages: [
-          {role: "system", content: systemcontent},
-          { role: 'user', content: msg }],
-        temperature: 0.7,
-      };
-      fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify(requestData),
-      })
-        .then((response) => response.json())
-        .then((data) => {
-          // Handle the API response data here
-          if (data.choices && data.choices.length > 0) {
-            const content = data.choices[0].message.content;
-            switch (title) {
-              case "REPHRASE":
-                setMsg(content);
-                break;
-              default:
-            }
-            setModalData({
-              title: title, // Assuming your API response has a "title" field
-              content: data.choices[0].message.content, // Assuming your API response has a "content" field
-            });
-            console.log(content);
-          } else {
-            console.log("Invalid API response or no choices found.");
-            setModalData({
-              title: title, // Assuming your API response has a "title" field
-              content: "API not give respon please try again", // Assuming your API response has a "content" field
-            });
-          }
-          console.log("data",data);
-        })
-        .catch((error) => {
-          // Handle any errors that occur during the API request
-          setModalData({
-            title: title, // Assuming your API response has a "title" field
-            content: "exeption", // Assuming your API response has a "content" field
-          });
+            console.log("It's Wednesday!");
+            break;
+          case "EXPAND":
+            systemcontent = "Expand the following brief sentence into a complete, coherent message of up to 100 words, ensuring it reads naturally and engagingly.";
+            break;
+          default:
+            console.log("It's the weekend!");
+        }
+  
+      try {
+        const response = await groq.chat.completions.create({
+          messages: [
+            { role: "system", content: systemcontent },
+            { role: "user", content: msg },
+          ],
+          model: "llama3-8b-8192",
+          temperature: 0.7,
         });
+  
+        if (response.choices && response.choices.length > 0) {
+content = response.choices[0]?.message?.content;
+          switch (title) {
+            case "REPHRASE":
+              setMsg(content);
+              break;
+            default:
+          }
+          setModalData({
+            title: title, // Assuming your response has a "title" field
+            content: content, // Assuming your response has a "content" field
+          });
+          console.log(content);
+        } else {
+          console.log("Invalid API response or no choices found.");
+          setModalData({
+            title: title, // Assuming your response has a "title" field
+            content: "API did not respond; please try again.", // Default error message
+          });
+        }
+        console.log("data", response);
+      } catch (error) {
+        // Handle any errors that occur during the API request
+        setModalData({
+          title: title, // Assuming your response has a "title" field
+          content: "An exception occurred.", // Custom error message
+        });
+        console.error("Error:", error);
+      }
     }
     setModal(true);
   };
